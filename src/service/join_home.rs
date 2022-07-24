@@ -6,7 +6,7 @@ use tokio::net;
 pub async fn handler(ip_port: &str) -> anyhow::Result<net::TcpStream> {
     let stream = net::TcpStream::connect(ip_port).await?;
     ygo_log!(
-        "join_home",
+        "JoinHome",
         format!("Connection to {} [tcp] succeeded!", ip_port)
     );
 

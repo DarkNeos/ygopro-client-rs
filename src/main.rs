@@ -1,6 +1,7 @@
 mod service;
 #[macro_use]
 mod utils;
+mod ygopro;
 
 fn main() -> anyhow::Result<()> {
     simple_logger::SimpleLogger::new()
