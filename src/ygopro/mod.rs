@@ -1,5 +1,7 @@
 //! YGOPro message protocol between client and server
 
+pub mod traits;
+
 #[repr(C)]
 pub struct YGOPacket {
     pub packet_len: u16,
@@ -11,8 +13,42 @@ impl YGOPacket {
     pub fn from_bytes(bytes: &[u8]) -> anyhow::Result<Self> {
         todo!()
     }
-    pub fn from_proto(proto: YGOProto, exdata: Vec<u8>) -> anyhow::Result<Self> {
-        todo!()
+    pub fn into_bytes(self) -> anyhow::Result<Vec<u8>> {
+        let len = self.packet_len as usize + 2;
+        let bytes = Vec::with_capacity(len);
+
+        unsafe {
+            let (ptr, _, _) = bytes.into_raw_parts();
+
+            *(ptr as *mut u16) = self.packet_len; // write packet_len
+
+            (ptr as *mut u8).offset(2).write(self.proto); // write proto
+
+            (ptr as *mut u8)
+                .offset(3)
+                .copy_from(self.exdata.as_ptr(), self.exdata.len()); // write
+                                                                     // exdata
+
+            Ok(Vec::from_raw_parts(ptr, len, len))
+        }
+    }
+
+    pub fn from_proto<T: traits::IntoExdata>(proto: YGOProto, exdata: T) -> anyhow::Result<Self> {
+        match proto {
+            YGOProto::CTOS(ctos) => match ctos {
+                CTOSMsg::PLAYER_INFO => {
+                    let exdata = exdata.into_exdata();
+
+                    Ok(Self {
+                        packet_len: exdata.len() as u16 + 1,
+                        proto: ctos as u8,
+                        exdata,
+                    })
+                }
+                _ => todo!(),
+            },
+            YGOProto::STOC(stoc) => todo!(),
+        }
     }
 }
 
