@@ -10,6 +10,7 @@ use ygopro::traits::IntoExdata;
 const SERVICE: &'static str = "JoinHome";
 const VERSION: u16 = 4947;
 const BUFFER_LEN: usize = 0x100;
+const FILLING_TOKEN: u16 = 0xcccc;
 
 pub async fn handler(ip_port: &str) -> anyhow::Result<net::TcpStream> {
     let mut stream = net::TcpStream::connect(ip_port).await?;
@@ -20,7 +21,7 @@ pub async fn handler(ip_port: &str) -> anyhow::Result<net::TcpStream> {
 
     let mut buffer = [0; BUFFER_LEN];
 
-    let player_info = CTOSPlayerInfo::new("sktt1ryze");
+    let player_info = CTOSPlayerInfo::new("sktt1faker");
     let proto = ygopro::YGOProto::CTOS(ygopro::CTOSMsg::PLAYER_INFO);
     let packet = ygopro::YGOPacket::from_proto(proto, player_info)?;
     let sent_len = stream.write(&packet.into_bytes()?).await?;
@@ -49,28 +50,40 @@ pub async fn handler(ip_port: &str) -> anyhow::Result<net::TcpStream> {
     Ok(stream)
 }
 
+const PLAYER_NAME_MAX_LEN: usize = 20;
+
 struct CTOSPlayerInfo {
-    pub name: Vec<u8>, // alias name of player
+    name: [u16; PLAYER_NAME_MAX_LEN], // alias name of player
 }
 
 impl CTOSPlayerInfo {
-    pub fn new(name: impl Into<String>) -> Self {
-        let name: String = name.into();
+    pub fn new(name: impl AsRef<str>) -> Self {
+        let mut s = Self {
+            name: [FILLING_TOKEN; PLAYER_NAME_MAX_LEN],
+        };
 
-        Self {
-            name: name.into_bytes(),
-        }
+        str_to_player_name_or_passwd(name, &mut s.name);
+
+        s
     }
 }
 
 impl IntoExdata for CTOSPlayerInfo {
     fn into_exdata(self) -> Vec<u8> {
-        self.name
+        let len = u16::BITS as usize * PLAYER_NAME_MAX_LEN / 8;
+        let exdata = Vec::with_capacity(len);
+
+        unsafe {
+            let (ptr, _, _) = exdata.into_raw_parts();
+
+            (ptr as *mut u16).copy_from(self.name.as_ptr(), self.name.len());
+
+            Vec::from_raw_parts(ptr, len, len)
+        }
     }
 }
 
 const PASS_MAX_LEN: usize = 20;
-const PASS_FILLING_TOKEN: u16 = 0xcccc;
 
 #[repr(C)]
 struct CTOSJoinGame {
@@ -81,24 +94,13 @@ struct CTOSJoinGame {
 
 impl CTOSJoinGame {
     pub fn new(version: u16, passwd: &str) -> Self {
-        let passwd = &passwd[..passwd.len().min(PASS_MAX_LEN)];
-        let passwd_iter = passwd.encode_utf16();
-
         let mut s = Self {
             version,
             gameid: 0,
-            pass: [PASS_FILLING_TOKEN; PASS_MAX_LEN],
+            pass: [FILLING_TOKEN; PASS_MAX_LEN],
         };
 
-        let mut p = 0;
-        for c in passwd_iter {
-            s.pass[p] = c;
-            p += 1;
-        }
-
-        if p < PASS_MAX_LEN {
-            s.pass[p] = 0;
-        }
+        str_to_player_name_or_passwd(passwd, &mut s.pass);
 
         s
     }
@@ -118,9 +120,25 @@ impl IntoExdata for CTOSJoinGame {
 
             (ptr as *mut u16)
                 .offset(4)
-                .copy_from(self.pass.as_ptr(), PASS_MAX_LEN); // write passwd
+                .copy_from(self.pass.as_ptr(), self.pass.len()); // write passwd
 
             Vec::from_raw_parts(ptr, len as usize, len as usize)
         }
+    }
+}
+
+fn str_to_player_name_or_passwd(s: impl AsRef<str>, v: &mut [u16]) {
+    let s = s.as_ref();
+    let s = &s[..s.len().min(v.len())];
+    let s_utf16 = s.encode_utf16();
+
+    let mut p = 0;
+    for c in s_utf16 {
+        v[p] = c;
+        p += 1;
+    }
+
+    if p < v.len() {
+        v[p] = 0;
     }
 }
