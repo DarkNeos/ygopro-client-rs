@@ -3,11 +3,15 @@
 use std::ffi::OsStr;
 
 use crate::{ygo_log, ygopro};
-use tokio::{io::AsyncWriteExt, net};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net,
+};
 use ygopro::traits::IntoExdata;
 
 const SERVICE: &'static str = "JoinHome";
 const VERSION: u16 = 4947;
+const BUFFER_LEN: usize = 0x100;
 
 pub async fn handler(ip_port: &str) -> anyhow::Result<net::TcpStream> {
     let mut stream = net::TcpStream::connect(ip_port).await?;
@@ -15,6 +19,8 @@ pub async fn handler(ip_port: &str) -> anyhow::Result<net::TcpStream> {
         SERVICE,
         format!("Connection to {} [tcp] succeeded!", ip_port)
     );
+
+    let mut buffer = [0; BUFFER_LEN];
 
     let player_info = CTOSPlayerInfo::new("sktt1ryze");
     let proto = ygopro::YGOProto::CTOS(ygopro::CTOSMsg::PLAYER_INFO);
@@ -26,6 +32,9 @@ pub async fn handler(ip_port: &str) -> anyhow::Result<net::TcpStream> {
     );
 
     let join_game = CTOSJoinGame::new(VERSION, "");
+    // let mut raw_passwd =  [52428; PASS_MAX_LEN];
+    // raw_passwd[0] = 0;
+    // join_game.set_raw_passwd(&raw_passwd);
     let proto = ygopro::YGOProto::CTOS(ygopro::CTOSMsg::JOIN_GAME);
     let packet = ygopro::YGOPacket::from_proto(proto, join_game)?;
     let sent_len = stream.write(&packet.into_bytes()?).await?;
@@ -33,6 +42,14 @@ pub async fn handler(ip_port: &str) -> anyhow::Result<net::TcpStream> {
         SERVICE,
         format!("send CTOS JoinGame packet len: {}", sent_len)
     );
+
+    let recv_len = stream.read(&mut buffer).await?;
+    if recv_len > 0 {
+        ygo_log!(
+            SERVICE,
+            format!("receive from ygopro server len: {}", recv_len)
+        );
+    }
 
     Ok(stream)
 }
@@ -84,6 +101,13 @@ impl CTOSJoinGame {
 
         s
     }
+
+    // for test
+    pub fn set_raw_passwd(&mut self, passwd: &[u16]) {
+        for (idx, c) in passwd.iter().enumerate() {
+            self.pass[idx] = *c;
+        }
+    }
 }
 
 impl IntoExdata for CTOSJoinGame {
@@ -96,10 +120,10 @@ impl IntoExdata for CTOSJoinGame {
 
             *(ptr as *mut u16) = self.version; // write version
 
-            ((ptr as *mut u8).offset(2) as *mut u32).write(self.gameid); // write gameid
+            (ptr as *mut u32).offset(1).write(self.gameid); // write gameid
 
             (ptr as *mut u16)
-                .offset(3)
+                .offset(4)
                 .copy_from(self.pass.as_ptr(), PASS_MAX_LEN); // write passwd
 
             Vec::from_raw_parts(ptr, len as usize, len as usize)
