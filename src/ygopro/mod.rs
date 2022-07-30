@@ -36,7 +36,7 @@ impl YGOPacket {
     pub fn from_proto<T: traits::IntoExdata>(proto: YGOProto, exdata: T) -> anyhow::Result<Self> {
         match proto {
             YGOProto::CTOS(ctos) => match ctos {
-                CTOSMsg::PLAYER_INFO => {
+                CTOSMsg::PLAYER_INFO | CTOSMsg::JOIN_GAME => {
                     let exdata = exdata.into_exdata();
 
                     Ok(Self {
