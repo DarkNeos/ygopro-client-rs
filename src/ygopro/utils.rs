@@ -7,7 +7,7 @@ macro_rules! ygo_log {
     };
 }
 
-pub fn str_to_player_name_or_passwd(s: impl AsRef<str>, v: &mut [u16]) {
+pub fn str_to_utf16_buffer(s: impl AsRef<str>, v: &mut [u16]) {
     let s = s.as_ref();
     let s = &s[..s.len().min(v.len())];
     let s_utf16 = s.encode_utf16();

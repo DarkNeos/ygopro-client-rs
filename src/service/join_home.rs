@@ -6,7 +6,7 @@ use tokio::{
     net,
 };
 use ygopro::traits::IntoExdata;
-use ygopro::utils::str_to_player_name_or_passwd;
+use ygopro::utils::str_to_utf16_buffer;
 
 const SERVICE: &'static str = "JoinHome";
 const VERSION: u16 = 4947;
@@ -69,7 +69,7 @@ impl CTOSPlayerInfo {
             name: [FILLING_TOKEN; PLAYER_NAME_MAX_LEN],
         };
 
-        str_to_player_name_or_passwd(name, &mut s.name);
+        str_to_utf16_buffer(name, &mut s.name);
 
         s
     }
@@ -107,7 +107,7 @@ impl CTOSJoinGame {
             pass: [FILLING_TOKEN; PASS_MAX_LEN],
         };
 
-        str_to_player_name_or_passwd(passwd, &mut s.pass);
+        str_to_utf16_buffer(passwd, &mut s.pass);
 
         s
     }
