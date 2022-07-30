@@ -1,5 +1,4 @@
 //! Utils
-
 #[macro_export]
 macro_rules! ygo_log {
     ($service:expr, $msg:expr) => {
@@ -21,6 +20,19 @@ pub fn str_to_utf16_buffer(s: impl AsRef<str>, v: &mut [u16]) {
     if p < v.len() {
         v[p] = 0;
     }
+}
+
+pub fn u8_utf16_buffer_to_str(v: &[u8]) -> String {
+    let v: Vec<u16> = v
+        .chunks_exact(2)
+        .into_iter()
+        .map(|a| u16::from_ne_bytes([a[0], a[1]]))
+        .collect();
+
+    let s = String::from_utf16_lossy(v.as_slice());
+    let end = s.find('\0').unwrap_or(s.len());
+
+    s[..end].to_string()
 }
 
 pub fn packet_len_min() -> usize {

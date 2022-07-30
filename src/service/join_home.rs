@@ -6,7 +6,7 @@ use tokio::{
     net,
 };
 use ygopro::traits::IntoExdata;
-use ygopro::utils::str_to_utf16_buffer;
+use ygopro::utils::*;
 
 const SERVICE: &'static str = "JoinHome";
 const VERSION: u16 = 4947;
@@ -44,13 +44,15 @@ pub async fn handler(ip_port: &str) -> anyhow::Result<net::TcpStream> {
     if recv_len > 0 {
         let packet = ygopro::YGOPacket::from_bytes(&buffer)?;
         if let Ok(stoc) = ygopro::STOCMsg::try_from(packet.proto) {
-            ygo_log!(
-                SERVICE,
-                format!(
-                    "receive STOC message: {:?}, packet_len: {}, recv_len: {}",
-                    stoc, packet.packet_len, recv_len
-                )
-            );
+            if stoc == ygopro::STOCMsg::CHAT {
+                let player = unsafe { (packet.exdata.as_ptr() as *const u16).read() };
+                let msg = u8_utf16_buffer_to_str(&packet.exdata[2..]);
+
+                ygo_log!(
+                    SERVICE,
+                    format!("receive STOC Chat packet, player: {}, msg: {}", player, msg)
+                );
+            }
         }
     }
 

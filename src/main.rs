@@ -1,4 +1,5 @@
 #![feature(vec_into_raw_parts)]
+#![feature(slice_take)]
 
 mod service;
 mod ygopro;
