@@ -6,10 +6,11 @@ use tokio::{
     net,
 };
 use ygopro::traits::IntoExdata;
+use ygopro::utils::str_to_player_name_or_passwd;
 
 const SERVICE: &'static str = "JoinHome";
 const VERSION: u16 = 4947;
-const BUFFER_LEN: usize = 0x100;
+const BUFFER_LEN: usize = 0x1000;
 const FILLING_TOKEN: u16 = 0xcccc;
 
 pub async fn handler(ip_port: &str) -> anyhow::Result<net::TcpStream> {
@@ -41,10 +42,16 @@ pub async fn handler(ip_port: &str) -> anyhow::Result<net::TcpStream> {
 
     let recv_len = stream.read(&mut buffer).await?;
     if recv_len > 0 {
-        ygo_log!(
-            SERVICE,
-            format!("receive from ygopro server len: {}", recv_len)
-        );
+        let packet = ygopro::YGOPacket::from_bytes(&buffer)?;
+        if let Ok(stoc) = ygopro::STOCMsg::try_from(packet.proto) {
+            ygo_log!(
+                SERVICE,
+                format!(
+                    "receive STOC message: {:?}, packet_len: {}, recv_len: {}",
+                    stoc, packet.packet_len, recv_len
+                )
+            );
+        }
     }
 
     Ok(stream)
@@ -124,21 +131,5 @@ impl IntoExdata for CTOSJoinGame {
 
             Vec::from_raw_parts(ptr, len as usize, len as usize)
         }
-    }
-}
-
-fn str_to_player_name_or_passwd(s: impl AsRef<str>, v: &mut [u16]) {
-    let s = s.as_ref();
-    let s = &s[..s.len().min(v.len())];
-    let s_utf16 = s.encode_utf16();
-
-    let mut p = 0;
-    for c in s_utf16 {
-        v[p] = c;
-        p += 1;
-    }
-
-    if p < v.len() {
-        v[p] = 0;
     }
 }

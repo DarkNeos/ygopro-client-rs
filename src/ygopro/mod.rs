@@ -1,6 +1,7 @@
 //! YGOPro message protocol between client and server
-
 pub mod traits;
+#[macro_use]
+pub mod utils;
 
 #[repr(C)]
 pub struct YGOPacket {
@@ -11,7 +12,21 @@ pub struct YGOPacket {
 
 impl YGOPacket {
     pub fn from_bytes(bytes: &[u8]) -> anyhow::Result<Self> {
-        todo!()
+        if bytes.len() < utils::packet_len_min() {
+            return Err(anyhow::anyhow!("packet len too short: {}", bytes.len()));
+        }
+
+        let (packet_len, proto) = unsafe {
+            let ptr = bytes.as_ptr();
+
+            ((ptr as *const u16).read(), ptr.offset(2).read())
+        };
+
+        Ok(Self {
+            packet_len,
+            proto,
+            exdata: Vec::from(&bytes[utils::packet_len_min()..]),
+        })
     }
     pub fn into_bytes(self) -> anyhow::Result<Vec<u8>> {
         let len = self.packet_len as usize + 2;
@@ -80,6 +95,7 @@ pub enum CTOSMsg {
 }
 
 #[repr(u8)]
+#[derive(PartialEq, Debug)]
 pub enum STOCMsg {
     GAME_MSG = 1,
     ERROR_MSG = 2,
@@ -103,4 +119,36 @@ pub enum STOCMsg {
     HS_PLAYER_CHANGE = 33,
     HS_WATCH_CHANGE = 34,
     FIELD_FINISH = 48,
+}
+
+impl TryFrom<u8> for STOCMsg {
+    type Error = anyhow::Error;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            1 => Ok(Self::GAME_MSG),
+            2 => Ok(Self::ERROR_MSG),
+            3 => Ok(Self::SELECT_HAND),
+            4 => Ok(Self::SELECT_TP),
+            5 => Ok(Self::HAND_RESULT),
+            6 => Ok(Self::TP_RESULT),
+            7 => Ok(Self::CHANGE_SIDE),
+            8 => Ok(Self::WAITTING_SIDE),
+            9 => Ok(Self::DECK_COUNT),
+            17 => Ok(Self::CREATE_GAME),
+            18 => Ok(Self::JOIN_GAME),
+            19 => Ok(Self::TYPE_CHANGE),
+            20 => Ok(Self::LEAVE_GAME),
+            21 => Ok(Self::DUEL_START),
+            22 => Ok(Self::DUEL_END),
+            23 => Ok(Self::REPLAY),
+            24 => Ok(Self::TIME_LIMIT),
+            25 => Ok(Self::CHAT),
+            32 => Ok(Self::HS_PLAYER_ENTER),
+            33 => Ok(Self::HS_PLAYER_CHANGE),
+            34 => Ok(Self::HS_WATCH_CHANGE),
+            48 => Ok(Self::FIELD_FINISH),
+            x => Err(anyhow::anyhow!("unknown proto: {}", x)),
+        }
+    }
 }

@@ -1,8 +1,6 @@
 #![feature(vec_into_raw_parts)]
 
 mod service;
-#[macro_use]
-mod utils;
 mod ygopro;
 
 fn main() -> anyhow::Result<()> {
