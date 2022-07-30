@@ -1,7 +1,5 @@
 //! Join home service logic
 
-use std::ffi::OsStr;
-
 use crate::{ygo_log, ygopro};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -31,10 +29,7 @@ pub async fn handler(ip_port: &str) -> anyhow::Result<net::TcpStream> {
         format!("send CTOS PlayerInfo packet len: {}", sent_len)
     );
 
-    let join_game = CTOSJoinGame::new(VERSION, "");
-    // let mut raw_passwd =  [52428; PASS_MAX_LEN];
-    // raw_passwd[0] = 0;
-    // join_game.set_raw_passwd(&raw_passwd);
+    let join_game = CTOSJoinGame::new(VERSION, "TM999#ccc");
     let proto = ygopro::YGOProto::CTOS(ygopro::CTOSMsg::JOIN_GAME);
     let packet = ygopro::YGOPacket::from_proto(proto, join_game)?;
     let sent_len = stream.write(&packet.into_bytes()?).await?;
@@ -75,7 +70,7 @@ impl IntoExdata for CTOSPlayerInfo {
 }
 
 const PASS_MAX_LEN: usize = 20;
-const PASS_FILLING_TOKEN: u16 = 204;
+const PASS_FILLING_TOKEN: u16 = 0xcccc;
 
 #[repr(C)]
 struct CTOSJoinGame {
@@ -86,7 +81,8 @@ struct CTOSJoinGame {
 
 impl CTOSJoinGame {
     pub fn new(version: u16, passwd: &str) -> Self {
-        let passwd = passwd.as_bytes();
+        let passwd = &passwd[..passwd.len().min(PASS_MAX_LEN)];
+        let passwd_iter = passwd.encode_utf16();
 
         let mut s = Self {
             version,
@@ -94,19 +90,17 @@ impl CTOSJoinGame {
             pass: [PASS_FILLING_TOKEN; PASS_MAX_LEN],
         };
 
-        unsafe {
-            (s.pass.as_mut_ptr() as *mut u8)
-                .copy_from(passwd.as_ptr(), passwd.len().min(PASS_MAX_LEN * 2 - 2));
+        let mut p = 0;
+        for c in passwd_iter {
+            s.pass[p] = c;
+            p += 1;
+        }
+
+        if p < PASS_MAX_LEN {
+            s.pass[p] = 0;
         }
 
         s
-    }
-
-    // for test
-    pub fn set_raw_passwd(&mut self, passwd: &[u16]) {
-        for (idx, c) in passwd.iter().enumerate() {
-            self.pass[idx] = *c;
-        }
     }
 }
 
