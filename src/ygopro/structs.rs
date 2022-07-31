@@ -127,7 +127,7 @@ impl STOCChat {
 #[derive(Debug)]
 pub struct STOCHsPlayerEnter {
     pub name: String,
-    pos: libc::c_uchar,
+    pub pos: libc::c_uchar,
 }
 
 impl STOCHsPlayerEnter {

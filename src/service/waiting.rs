@@ -4,7 +4,7 @@ use crate::{
     ygopro::{self, *},
 };
 use tokio::{io::AsyncReadExt, net::TcpStream};
-use ygopro::{structs::*, traits::IntoExdata, utils::*};
+use ygopro::{structs::*, utils::*};
 
 const SERVICE: &'static str = "WaitingHome";
 
@@ -48,7 +48,12 @@ pub async fn handler(mut stream: TcpStream, host_info: HostInfo) -> anyhow::Resu
                         format!("receive STOC Chat packet, info: {:?}", chat)
                     );
                 }
-                _ => {}
+                x => {
+                    ygo_log!(
+                        SERVICE,
+                        format!("unhandled msg: {:?}", x)
+                    );
+                }
             }
         }
     }
