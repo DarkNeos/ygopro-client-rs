@@ -11,7 +11,10 @@ use ygopro::{structs::*, utils::*};
 
 const SERVICE: &'static str = "WaitingHome";
 
-pub async fn handler(mut stream: TcpStream, host_info: HostInfo) -> anyhow::Result<TcpStream> {
+pub async fn handler(
+    mut stream: TcpStream,
+    host_info: HostInfo,
+) -> anyhow::Result<(TcpStream, Duel)> {
     // todo: should be multi thread
     let mut buffer = [0; BUFFER_LEN];
 
@@ -69,6 +72,17 @@ pub async fn handler(mut stream: TcpStream, host_info: HostInfo) -> anyhow::Resu
                         SERVICE,
                         format!("receive STOC Chat packet, info: {:?}", chat)
                     );
+                }
+                STOCMsg::DUEL_START => {
+                    ygo_log!(SERVICE, "duel start!");
+
+                    return Ok((
+                        stream,
+                        Duel {
+                            host_info,
+                            ..Default::default()
+                        },
+                    ));
                 }
                 x => {
                     ygo_log!(SERVICE, format!("unhandled msg: {:?}", x));

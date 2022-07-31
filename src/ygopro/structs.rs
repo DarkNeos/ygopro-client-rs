@@ -2,8 +2,13 @@ use super::{traits::*, utils::*};
 
 const FILLING_TOKEN: u16 = 0xcccc;
 
+#[derive(Debug, Default)]
+pub struct Duel {
+    pub host_info: HostInfo,
+}
+
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct HostInfo {
     pub lflist: libc::c_uint,
     pub rule: libc::c_uchar,
