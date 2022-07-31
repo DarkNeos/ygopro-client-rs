@@ -9,7 +9,6 @@ use ygopro::{traits::IntoExdata, utils::*};
 
 const SERVICE: &'static str = "JoinHome";
 const VERSION: u16 = 4947;
-const BUFFER_LEN: usize = 0x1000;
 const FILLING_TOKEN: u16 = 0xcccc;
 
 pub async fn handler(ip_port: &str) -> anyhow::Result<net::TcpStream> {

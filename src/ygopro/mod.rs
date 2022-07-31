@@ -25,7 +25,7 @@ impl YGOPacket {
         Ok(Self {
             packet_len,
             proto,
-            exdata: Vec::from(&bytes[utils::packet_len_min()..]),
+            exdata: Vec::from(&bytes[utils::packet_len_min()..packet_len as usize + 2]),
         })
     }
     pub fn into_bytes(self) -> anyhow::Result<Vec<u8>> {
