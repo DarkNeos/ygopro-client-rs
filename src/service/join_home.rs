@@ -38,23 +38,37 @@ pub async fn handler(ip_port: &str) -> anyhow::Result<net::TcpStream> {
         format!("send CTOS JoinGame packet len: {}", sent_len)
     );
 
-    let recv_len = stream.read(&mut buffer).await?;
-    if recv_len > 0 {
-        let packet = ygopro::YGOPacket::from_bytes(&buffer)?;
-        if let Ok(stoc) = ygopro::STOCMsg::try_from(packet.proto) {
-            if stoc == ygopro::STOCMsg::CHAT {
-                let player = unsafe { (packet.exdata.as_ptr() as *const u16).read() };
-                let msg = u8_utf16_buffer_to_str(&packet.exdata[2..]);
+    loop {
+        let recv_len = stream.read(&mut buffer).await?;
+        if recv_len > 0 {
+            let mut packet = ygopro::YGOPacket::from_bytes(&buffer)?;
+            if let Ok(stoc) = ygopro::STOCMsg::try_from(packet.proto) {
+                if stoc == ygopro::STOCMsg::CHAT {
+                    let player = unsafe { (packet.exdata.as_ptr() as *const u16).read() };
+                    let msg = u8_utf16_buffer_to_str(&packet.exdata[2..]);
 
-                ygo_log!(
-                    SERVICE,
-                    format!("receive STOC Chat packet, player: {}, msg: {}", player, msg)
-                );
+                    ygo_log!(
+                        SERVICE,
+                        format!("receive STOC Chat packet, player: {}, msg: {}", player, msg)
+                    );
+                } else if stoc == ygopro::STOCMsg::JOIN_GAME {
+                    let join_game = unsafe {
+                        STOCJoinGame::from_exdata(std::mem::take(&mut &mut packet.exdata))
+                    };
+
+                    ygo_log!(
+                        SERVICE,
+                        format!(
+                            "succeed in joining home! host info: {:?}",
+                            join_game.host_info
+                        )
+                    );
+
+                    return Ok(stream);
+                }
             }
         }
     }
-
-    Ok(stream)
 }
 
 const PLAYER_NAME_MAX_LEN: usize = 20;
@@ -132,4 +146,30 @@ impl IntoExdata for CTOSJoinGame {
             Vec::from_raw_parts(ptr, len as usize, len as usize)
         }
     }
+}
+
+#[repr(C)]
+struct STOCJoinGame {
+    pub host_info: HostInfo,
+}
+
+impl STOCJoinGame {
+    pub unsafe fn from_exdata(exdata: Vec<u8>) -> Self {
+        std::ptr::read(exdata.as_ptr() as *const _)
+    }
+}
+
+#[repr(C)]
+#[derive(Debug)]
+struct HostInfo {
+    pub lflist: libc::c_uint,
+    pub rule: libc::c_uchar,
+    pub mode: libc::c_uchar,
+    pub duel_rule: libc::c_uchar,
+    pub no_check_deck: bool,
+    pub no_shuffle_deck: bool,
+    pub start_lp: libc::c_uint,
+    pub start_hand: libc::c_uchar,
+    pub draw_count: libc::c_uchar,
+    pub time_limit: libc::c_ushort,
 }

@@ -10,3 +10,4 @@ tokio = {version = "1.20.0", features = ["rt", "net", "io-util", "time"]}
 log = "0.4.17"
 simple_logger = "2.1.0"
 anyhow = "1.0.58"
+libc = "0.2"
