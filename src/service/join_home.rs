@@ -5,8 +5,7 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net,
 };
-use ygopro::traits::IntoExdata;
-use ygopro::utils::*;
+use ygopro::{traits::IntoExdata, utils::*};
 
 const SERVICE: &'static str = "JoinHome";
 const VERSION: u16 = 4947;

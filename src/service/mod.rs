@@ -3,7 +3,6 @@
 //!  * Join home
 //!  * Send CTOS message
 //!  * Receive STOC message
-//!
 
 mod join_home;
 
