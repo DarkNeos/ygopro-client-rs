@@ -2,7 +2,7 @@
 pub mod traits;
 #[macro_use]
 pub mod utils;
-
+pub mod structs;
 #[repr(C)]
 pub struct YGOPacket {
     pub packet_len: u16,
