@@ -1,7 +1,7 @@
 //! Waiting home service logic
 use crate::{
     ygo_log,
-    ygopro::{self, traits::IntoExdata, *},
+    ygopro::{self, *},
 };
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
