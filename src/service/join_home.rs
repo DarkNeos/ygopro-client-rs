@@ -21,7 +21,7 @@ pub async fn handler(ip_port: &str) -> anyhow::Result<(net::TcpStream, HostInfo)
 
     let player_info = CTOSPlayerInfo::new("sktt1faker");
     let proto = ygopro::YGOProto::CTOS(ygopro::CTOSMsg::PLAYER_INFO);
-    let packet = ygopro::YGOPacket::from_proto(proto, player_info)?;
+    let packet = ygopro::YGOPacket::from_proto(proto, Some(player_info))?;
     let sent_len = stream.write(&packet.into_bytes()?).await?;
     ygo_log!(
         SERVICE,
@@ -30,7 +30,7 @@ pub async fn handler(ip_port: &str) -> anyhow::Result<(net::TcpStream, HostInfo)
 
     let join_game = CTOSJoinGame::new(VERSION, "TM999#ccc");
     let proto = ygopro::YGOProto::CTOS(ygopro::CTOSMsg::JOIN_GAME);
-    let packet = ygopro::YGOPacket::from_proto(proto, join_game)?;
+    let packet = ygopro::YGOPacket::from_proto(proto, Some(join_game))?;
     let sent_len = stream.write(&packet.into_bytes()?).await?;
     ygo_log!(
         SERVICE,

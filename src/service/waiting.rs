@@ -1,17 +1,39 @@
 //! Waiting home service logic
 use crate::{
     ygo_log,
-    ygopro::{self, *},
+    ygopro::{self, traits::IntoExdata, *},
 };
-use tokio::{io::AsyncReadExt, net::TcpStream};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::TcpStream,
+};
 use ygopro::{structs::*, utils::*};
 
 const SERVICE: &'static str = "WaitingHome";
 
 pub async fn handler(mut stream: TcpStream, host_info: HostInfo) -> anyhow::Result<TcpStream> {
-    // todo: 这里应该使用多线程并发处理，由于此项目属于demo性质，
-    // 因此使用单线程循环简单处理
+    // todo: should be multi thread
     let mut buffer = [0; BUFFER_LEN];
+
+    // send update deck packet
+    let update_deck = CTOSUpdateDeck {
+        inner: deck::Deck::from_path("deck/hero.ydk")?,
+    };
+    let proto = YGOProto::CTOS(CTOSMsg::UPDATE_DECK);
+    let packet = YGOPacket::from_proto(proto, Some(update_deck))?;
+    let sent_len = stream.write(&packet.into_bytes()?).await?;
+    ygo_log!(
+        SERVICE,
+        format!("send CTOS UpdateDeck packet len: {}", sent_len)
+    );
+
+    let proto = YGOProto::CTOS(CTOSMsg::HS_READY);
+    let packet = YGOPacket::from_proto(proto, None::<CTOSEmpty>)?;
+    let sent_len = stream.write(&packet.into_bytes()?).await?;
+    ygo_log!(
+        SERVICE,
+        format!("send CTOS HsReady packet len: {}", sent_len)
+    );
 
     loop {
         let recv_len = stream.read(&mut buffer).await?;

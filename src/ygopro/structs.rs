@@ -19,6 +19,14 @@ pub struct HostInfo {
 
 // ----- CTOS -----
 
+pub struct CTOSEmpty;
+
+impl IntoExdata for CTOSEmpty {
+    fn into_exdata(self) -> Vec<u8> {
+        vec![]
+    }
+}
+
 const PLAYER_NAME_MAX_LEN: usize = 20;
 
 pub struct CTOSPlayerInfo {
@@ -92,6 +100,35 @@ impl IntoExdata for CTOSJoinGame {
                 .copy_from(self.pass.as_ptr(), self.pass.len()); // write passwd
 
             Vec::from_raw_parts(ptr, len as usize, len as usize)
+        }
+    }
+}
+
+pub struct CTOSUpdateDeck {
+    pub inner: super::deck::Deck,
+}
+
+impl IntoExdata for CTOSUpdateDeck {
+    fn into_exdata(mut self) -> Vec<u8> {
+        let mut v: Vec<i32> = Vec::new();
+        v.push(self.inner.main.len() as i32 + self.inner.extra.len() as i32);
+        v.push(self.inner.side.len() as i32);
+        v.extend(std::mem::take(&mut self.inner.main));
+        v.extend(std::mem::take(&mut self.inner.extra));
+        v.extend(std::mem::take(&mut self.inner.side));
+
+        unsafe {
+            let ratio = std::mem::size_of::<u32>() / std::mem::size_of::<u8>();
+
+            let len = v.len() * ratio;
+            let capacity = v.capacity() * ratio;
+
+            let ptr = v.as_mut_ptr() as *mut u8;
+
+            // don't run the destructor for v
+            std::mem::forget(v);
+
+            Vec::from_raw_parts(ptr, len, capacity)
         }
     }
 }

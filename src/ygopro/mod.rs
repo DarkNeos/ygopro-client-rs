@@ -50,11 +50,17 @@ impl YGOPacket {
         }
     }
 
-    pub fn from_proto<T: traits::IntoExdata>(proto: YGOProto, exdata: T) -> anyhow::Result<Self> {
+    pub fn from_proto<T: traits::IntoExdata>(
+        proto: YGOProto,
+        exdata: Option<T>,
+    ) -> anyhow::Result<Self> {
         match proto {
             YGOProto::CTOS(ctos) => match ctos {
-                CTOSMsg::PLAYER_INFO | CTOSMsg::JOIN_GAME => {
-                    let exdata = exdata.into_exdata();
+                CTOSMsg::PLAYER_INFO
+                | CTOSMsg::JOIN_GAME
+                | CTOSMsg::UPDATE_DECK
+                | CTOSMsg::HS_READY => {
+                    let exdata = exdata.map(|e| e.into_exdata()).unwrap_or(vec![]);
 
                     Ok(Self {
                         packet_len: exdata.len() as u16 + 1,
