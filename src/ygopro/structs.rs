@@ -104,6 +104,7 @@ impl IntoExdata for CTOSJoinGame {
     }
 }
 
+#[derive(Debug)]
 pub struct CTOSUpdateDeck {
     pub inner: super::deck::Deck,
 }

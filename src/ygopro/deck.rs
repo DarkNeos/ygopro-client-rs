@@ -6,7 +6,7 @@ use std::{
     path::Path,
 };
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Deck {
     pub main: Vec<i32>,
     pub extra: Vec<i32>,
@@ -18,12 +18,13 @@ impl Deck {
         let mut deck = Deck::default();
 
         let f = File::open(p)?;
-        let mut reader = BufReader::new(f);
+        let reader = BufReader::new(f);
 
-        let mut line = String::new();
         let mut flag = -1;
 
-        while reader.read_line(&mut line)? > 0 {
+        for line in reader.lines() {
+            let line = line?;
+
             match line.as_str() {
                 "#main" => {
                     flag = 1;
