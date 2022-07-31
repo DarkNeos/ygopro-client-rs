@@ -49,10 +49,7 @@ pub async fn handler(mut stream: TcpStream, host_info: HostInfo) -> anyhow::Resu
                     );
                 }
                 x => {
-                    ygo_log!(
-                        SERVICE,
-                        format!("unhandled msg: {:?}", x)
-                    );
+                    ygo_log!(SERVICE, format!("unhandled msg: {:?}", x));
                 }
             }
         }
